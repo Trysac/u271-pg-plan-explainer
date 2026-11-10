@@ -9,4 +9,5 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Added pg_plan_explainer package to parse and analyze PostgreSQL EXPLAIN ANALYZE JSON plans.
 - Initial project structure from the factory utility template.

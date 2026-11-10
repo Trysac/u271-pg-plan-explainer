@@ -19,6 +19,9 @@ classifiers = [
 ]
 dependencies = []
 
+[project.scripts]
+pg-plan-explainer = "pg_plan_explainer.__main__:main"
+
 [project.urls]
 Homepage = "https://github.com/Trysac/u271-pg-plan-explainer"
 Source = "https://github.com/Trysac/u271-pg-plan-explainer"
