@@ -107,15 +107,20 @@ def test_parse_plan_invalid_plans_shape(plans) -> None:
 
 
 def test_parse_plan_deep_nesting_does_not_crash() -> None:
-    # Deeply nested plan beyond the interpreter recursion limit
-    plan: dict = {"Node Type": "Result"}
-    current = plan
-    for _ in range(500):
-        child: dict = {"Node Type": "Result"}
-        current["Plans"] = [child]
-        current = child
+    # Deeply nested plan beyond the interpreter recursion limit. Build the JSON
+    # text directly: json.dumps recurses per nesting level (and on some Python
+    # versions hits the recursion limit before the parser is ever exercised),
+    # so serialising a deep dict would crash the test itself.
+    depth = 500
+    text = (
+        '{"Plan": '
+        + '{"Node Type": "Result", "Plans": [' * depth
+        + '{"Node Type": "Result"}'
+        + "]}" * depth
+        + "}"
+    )
     with pytest.raises(PlanError) as excinfo:
-        parse_plan(json.dumps({"Plan": plan}))
+        parse_plan(text)
     assert excinfo.value.code == "too_deep"
 
     with pytest.raises(PlanError) as excinfo:
