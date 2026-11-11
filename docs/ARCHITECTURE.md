@@ -1,29 +1,16 @@
 # Architecture
 
-## Purpose
+`pg_plan_explainer` is a single-package, stdlib-only Python library.
 
-`trysac-pg-plan-explainer` is a small, dependency-free Python library: Explain PostgreSQL EXPLAIN ANALYZE JSON plans: exclusive time per node, the slowest nodes, and findings for filter-heavy scans, misestimates, disk sorts, hash batches and costly nested loops
+- **Parsing** (`parse_plan`): Accepts a JSON string from `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)`. It is decoded with `json.loads`, then a size check (`max_bytes` default 20 MiB) and an iterative tree walk enforce depth (100) and node count (100,000) limits. The walk is iterative, using an explicit stack, to avoid recursion limits on deep plans.
+- **Analysis** (`analyze`): Performs an iterative postorder traversal. For each node, `total_ms = Actual Total Time * Actual Loops`; `exclusive_ms = total_ms - sum(children total_ms)`, clamped at zero and rounded to three decimals. Hotspots are the top `top` (default 5) nodes by exclusive time, ties broken by traversal order. Findings (`P001`–`P006`) are generated from PostgreSQL field semantics and sorted by traversal order then code.
+- **Rendering / CLI**: `render` produces the human-readable output; `src/pg_plan_explainer/__main__.py` reads a file or stdin and maps findings to exit codes.
 
-## Shape
+## Design decisions
 
-```text
-caller code --> pg_plan_explainer (public API in __init__.py)
-                    |
-                    +-- pure functions, no I/O, no global state
-```
+- **Stdlib only**: No dependencies beyond Python ≥3.10; JSON parsing and dataclasses suffice.
+- **Frozen dataclasses**: Public model types are immutable for safe sharing.
+- **Logging**: A module logger with `NullHandler`; library users may configure logging.
+- **Adversarial limits**: All untrusted inputs bound by size, depth, and node count.
 
-- **Public API**: the names listed in `__all__` of `src/pg_plan_explainer/__init__.py`. Anything else is
-  internal and may change without a major version.
-- **Errors**: invalid input raises built-in exceptions (`ValueError`, `TypeError`) with a clear
-  message; the library never prints or exits.
-- **Side effects**: none. If a feature needs I/O, isolate it in its own module behind a small
-  interface and record the choice in an ADR.
-
-## Quality contract
-
-`scripts/check.py` is the single definition of the gates; `fabrica.json` tells the factory and CI
-how to run it. See [TESTING.md](TESTING.md).
-
-## Decisions
-
-Architecture decisions are recorded in [decisions/](decisions/) as numbered ADRs.
+See `docs/decisions/` for recorded decisions.

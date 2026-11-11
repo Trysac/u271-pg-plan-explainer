@@ -1,48 +1,46 @@
-# pg-plan-explainer
+# trysac-pg-plan-explainer
 
-[![PyPI version](https://img.shields.io/pypi/v/trysac-pg-plan-explainer)](https://pypi.org/project/trysac-pg-plan-explainer/)
-[![License: MIT](https://img.shields.io/pypi/l/trysac-pg-plan-explainer)](LICENSE)
-[![CI](https://github.com/Trysac/u271-pg-plan-explainer/actions/workflows/ci.yml/badge.svg)](https://github.com/Trysac/u271-pg-plan-explainer/actions/workflows/ci.yml)
+Explain PostgreSQL `EXPLAIN ANALYZE` JSON plans offline: compute exclusive time per node, rank the slowest nodes, and surface common problems with stable machine-readable codes.
 
-Explain PostgreSQL EXPLAIN ANALYZE JSON plans: exclusive time per node, the slowest nodes, and findings for filter-heavy scans, misestimates, disk sorts, hash batches and costly nested loops
+## Installation
 
-## Problem
-
-Describe in two or three sentences the concrete problem this utility solves, who hits it, and what
-they do today without it. Replace this paragraph when the first real feature lands.
-
-## Install
-
-```sh
+```bash
 pip install trysac-pg-plan-explainer
-# or
-uv add trysac-pg-plan-explainer
 ```
-
-Requires Python 3.10 or newer. No runtime dependencies.
 
 ## Usage
 
 ```python
-import pg_plan_explainer
+import json
+from pg_plan_explainer import parse_plan, analyze, render
 
-# normalize() trims surrounding whitespace and lower-cases the text.
-print(pg_plan_explainer.normalize("  Hello World "))  # -> "hello world"
-
-# Blank input is rejected explicitly instead of returning an empty string.
-try:
-    pg_plan_explainer.normalize("   ")
-except ValueError as exc:
-    print(f"rejected: {exc}")
+plan_json = """{"Plan": {"Node Type": "Seq Scan", "Relation Name": "t", "Actual Total Time": 1.2, "Actual Loops": 1}}"""
+root = parse_plan(plan_json)
+report = analyze(root)
+print(render(report))
 ```
 
-## Documentation
+## CLI
 
-- [Architecture](docs/ARCHITECTURE.md) and [decisions](docs/decisions/)
-- [Testing](docs/TESTING.md) and [security](docs/SECURITY.md)
-- [Project record](docs/PROJECT.md) and [stack](docs/STACK.md)
-- [Changelog](CHANGELOG.md) and [contributing guide](CONTRIBUTING.md)
+```bash
+python -m pg_plan_explainer plan.json
+```
+Exit codes: `0` no findings, `1` findings found, `2` usage or invalid input.
+
+## Error handling
+
+`PlanError` is raised with a stable `code`:
+
+- `invalid_json` – input is not valid JSON
+- `invalid_plan` – JSON shape missing `Plan`
+- `input_too_large` – input exceeds the default 20 MiB limit
+- `too_deep` – plan nesting deeper than 100 levels
+- `too_many_nodes` – more than 100,000 plan nodes
+
+## Security
+
+See `docs/SECURITY.md` for the threat model.
 
 ## License
 
-[MIT](LICENSE) (c) 2026 Miguel Gomez
+MIT
